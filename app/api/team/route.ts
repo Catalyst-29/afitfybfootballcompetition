@@ -1,6 +1,6 @@
-import { NextResponse } from 'next/server'; import { getTeamSession } from '@/lib/session'; import { supabaseAdmin } from '@/lib/supabase';
+import { NextResponse } from 'next/server'; import { getTeamSession, hasAcceptedRules } from '@/lib/session'; import { supabaseAdmin } from '@/lib/supabase';
 export async function POST(req: Request){
- const departmentId=await getTeamSession(); if(!departmentId) return NextResponse.json({error:'Session expired.'},{status:401});
+ const departmentId=await getTeamSession(); if(!departmentId) return NextResponse.json({error:'Session expired.'},{status:401}); if(!(await hasAcceptedRules(departmentId))) return NextResponse.json({error:'Accept the tournament rules before uploading a logo.'},{status:403});
  const form=await req.formData(); const file=form.get('logo'); if(!(file instanceof File)) return NextResponse.json({error:'PNG logo is required.'},{status:400});
  if(file.type!=='image/png') return NextResponse.json({error:'Logo must be PNG.'},{status:400}); if(file.size>5*1024*1024) return NextResponse.json({error:'Logo must be 5MB or smaller.'},{status:400});
  const sb=supabaseAdmin(); const {data: existing}=await sb.from('teams').select('*').eq('department_id',departmentId).maybeSingle();

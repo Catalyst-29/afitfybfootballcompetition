@@ -3,6 +3,7 @@ import { cookies } from 'next/headers';
 
 const TEAM_COOKIE = 'competition_team';
 const ADMIN_COOKIE = 'competition_admin';
+const RULES_COOKIE = 'competition_rules_accepted';
 
 function secret() {
   const s = process.env.APP_SESSION_SECRET;
@@ -25,9 +26,22 @@ function verify(raw?: string) {
 }
 
 export async function setTeamSession(departmentId: string) {
-  (await cookies()).set(TEAM_COOKIE, token(departmentId), { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 60 * 60 * 24 * 14 });
+  const store = await cookies();
+  store.set(TEAM_COOKIE, token(departmentId), { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 60 * 60 * 24 * 14 });
 }
 export async function getTeamSession() { return verify((await cookies()).get(TEAM_COOKIE)?.value); }
+export async function setRulesAccepted(departmentId: string) {
+  const store = await cookies();
+  const current = verify(store.get(RULES_COOKIE)?.value);
+  const accepted = new Set(current?.startsWith('rules:') ? current.slice(6).split(',').filter(Boolean) : current ? [current] : []);
+  accepted.add(departmentId);
+  store.set(RULES_COOKIE, token(`rules:${Array.from(accepted).join(',')}`), { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 60 * 60 * 24 * 365 });
+}
+export async function hasAcceptedRules(departmentId: string) {
+  const value = verify((await cookies()).get(RULES_COOKIE)?.value);
+  if (value === departmentId) return true;
+  return value?.startsWith('rules:') ? value.slice(6).split(',').includes(departmentId) : false;
+}
 export async function clearTeamSession() { (await cookies()).delete(TEAM_COOKIE); }
 export async function setAdminSession() { (await cookies()).set(ADMIN_COOKIE, token('admin'), { httpOnly: true, sameSite: 'lax', secure: process.env.NODE_ENV === 'production', path: '/', maxAge: 60 * 60 * 8 }); }
 export async function isAdmin() { return verify((await cookies()).get(ADMIN_COOKIE)?.value) === 'admin'; }

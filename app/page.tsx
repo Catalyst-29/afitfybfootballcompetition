@@ -31,10 +31,10 @@ export default function Home() {
       <div className="stadium-wash" />
       <div className="container page-content">
         <nav className="nav">
-          <div className="brand">
+          <a className="brand" href="/" aria-label="Go to homepage">
             <img className="brand-logo" src="/afit-logo-transparent.png" alt="Air Force Institute of Technology crest" />
             <div><span>AFIT Final Year Competition</span><small>2026/2027 Session</small></div>
-          </div>
+          </a>
           <div className="nav-actions">
             <span className="nav-tag">Official registration portal</span>
             <a className="admin-link" href="/admin"><ShieldCheck size={15} /> Admin login</a>

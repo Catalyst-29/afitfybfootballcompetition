@@ -53,7 +53,7 @@ export default function RulesClient({ departmentName }: { departmentName: string
     <main className="shell rules-shell">
       <div className="container page-content">
         <nav className="nav">
-          <div className="brand"><img className="brand-logo" src="/afit-logo-transparent.png" alt="AFIT crest" /><div><span>AFIT Final Year Competition</span><small>2026/2027 Session</small></div></div>
+          <a className="brand" href="/" aria-label="Go to homepage"><img className="brand-logo" src="/afit-logo-transparent.png" alt="AFIT crest" /><div><span>AFIT Final Year Competition</span><small>2026/2027 Session</small></div></a>
           <button className="btn secondary tiny" onClick={declineRules}><LogOut size={14} /> Exit</button>
         </nav>
 

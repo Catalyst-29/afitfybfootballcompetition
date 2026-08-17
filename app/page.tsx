@@ -14,16 +14,26 @@ export default function Home() {
     event.preventDefault();
     setLoading(true);
     setError('');
-    const response = await fetch('/api/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ token }),
-    });
-    const result = await response.json();
-    setLoading(false);
-    if (!response.ok) return setError(result.error);
-    router.push(result.hasTeam ? '/dashboard' : '/rules');
-    router.refresh();
+    try {
+      const response = await fetch('/api/login', {
+        method: 'POST',
+        credentials: 'same-origin',
+        cache: 'no-store',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token }),
+      });
+      const result = await response.json().catch(() => null);
+      if (!response.ok) {
+        setError(result?.error || 'Token verification failed. Please try again.');
+        return;
+      }
+      router.push(result.hasTeam ? '/dashboard' : '/rules');
+      router.refresh();
+    } catch {
+      setError('Unable to connect. Check your internet connection and try again.');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

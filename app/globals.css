@@ -27,6 +27,23 @@
 @media(max-width:850px){.registration-workspace{grid-template-columns:1fr}.player-registration-card{width:min(520px,100%)}.dashboard-summary-row{flex-wrap:wrap}.squad-counter{margin-left:0}}
 @media(max-width:520px){.compact-dash-head{padding-top:22px}.compact-department-heading{align-items:flex-start}.department-logo-button{width:56px;height:56px;flex-basis:56px}.department-title-block h1{font-size:25px}.inline-registration-status{align-items:flex-start;flex-wrap:wrap}.dashboard-summary-row{display:grid;grid-template-columns:1fr 1fr}.compact-player-stat{min-width:0;padding:10px}.compact-player-stat span{font-size:9px}.compact-player-stat b{font-size:20px}.squad-counter{grid-column:1/-1}.player-registration-card{padding:17px}.portrait-player-form .dob-fields{grid-template-columns:.75fr 1.3fr .9fr}}
 
+@media(max-width:520px){
+  .registration-workspace,.player-registration-card,.portrait-player-form,.portrait-player-form>*{min-width:0;max-width:100%}
+  .player-registration-card{width:100%;padding:14px;border-radius:15px}
+  .player-registration-card .section-title{align-items:flex-start;gap:8px}
+  .player-registration-card .section-title h2{font-size:17px}
+  .portrait-player-form .input,.portrait-player-form .select{width:100%;min-width:0;padding:11px 10px;font-size:14px}
+  .portrait-player-form .upload{min-width:0;padding:13px}
+  .portrait-player-form input[type="file"]{display:block;width:100%;max-width:100%;font-size:12px}
+  .portrait-player-form .dob-fields{width:100%;grid-template-columns:minmax(0,.72fr) minmax(0,1.2fr) minmax(0,.88fr);gap:5px}
+  .portrait-player-form .dob-fields .select{padding-left:6px;padding-right:4px;font-size:12px}
+}
+
+/* Reference-style player registration form */
+.reference-player-form{display:grid;gap:16px}.reference-photo-panel{display:grid;grid-template-columns:130px minmax(0,1fr);gap:18px;align-items:center;padding:16px;border-radius:15px;background:rgba(2,14,40,.62)}.reference-photo-picker{position:relative;width:130px;height:130px;display:grid;place-items:center;align-content:center;gap:7px;border:1px solid rgba(151,174,205,.38);border-radius:50%;background:rgba(255,255,255,.08);color:#f3f7ff;cursor:pointer}.reference-photo-picker input{position:absolute;inset:0;width:100%;height:100%;opacity:0;cursor:pointer}.reference-photo-picker span{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.05em}.reference-photo-guidance{padding:14px;border:1px solid rgba(151,174,205,.28);border-radius:12px;color:#c3ccdb;font-size:12px;line-height:1.45}.reference-photo-guidance b{color:#f4f7fb}.reference-fields{display:grid;gap:12px;padding:16px;border-radius:15px;background:rgba(2,14,40,.62)}.reference-fields .input,.reference-fields .select{min-height:54px;padding:14px 16px;border-color:rgba(151,174,205,.3);background:rgba(255,255,255,.07);font-size:15px}.reference-fields .input::placeholder{color:#9aa6b9;opacity:1}.reference-fields input[type="date"]{color-scheme:dark}.reference-field-pair{display:grid;grid-template-columns:1fr 1fr;gap:12px}.reference-field-pair>div{min-width:0}.reference-field-pair .input,.reference-field-pair .select{width:100%;min-width:0;padding-left:12px;padding-right:10px}
+@media(max-width:520px){.reference-player-form{gap:12px}.reference-photo-panel{grid-template-columns:105px minmax(0,1fr);gap:11px;padding:12px}.reference-photo-picker{width:105px;height:105px}.reference-photo-picker svg{width:30px}.reference-photo-guidance{padding:10px;font-size:11px}.reference-fields{gap:10px;padding:12px}.reference-fields .input,.reference-fields .select{min-height:48px;padding:11px 12px;font-size:14px}.reference-field-pair{gap:8px}.reference-field-pair .input,.reference-field-pair .select{padding-left:9px;padding-right:7px;font-size:13px}}
+@media(max-width:360px){.reference-photo-panel{grid-template-columns:88px minmax(0,1fr)}.reference-photo-picker{width:88px;height:88px}.reference-photo-picker span{display:none}.reference-photo-guidance{font-size:10px}.reference-field-pair{grid-template-columns:1fr}}
+
 /* Department-first admin landing view */
 .admin-summary-two{grid-template-columns:repeat(2,minmax(0,1fr));max-width:650px}.admin-browser.departments-only{grid-template-columns:1fr}.admin-browser.departments-only .department-list{position:static;max-height:none}.admin-browser.departments-only .department-items{grid-template-columns:repeat(3,minmax(0,1fr));overflow:visible}.admin-browser.departments-only .department-item{border-color:rgba(91,158,235,.16);background:rgba(2,14,40,.45)}
 @media(max-width:900px){.admin-browser.departments-only .department-items{grid-template-columns:repeat(2,minmax(0,1fr))}}
@@ -34,3 +51,5 @@
 
 .setup-copy h1{font-size:clamp(38px,5vw,60px)}
 @media(max-width:520px){.setup-copy h1{font-size:36px}}
+
+.select{color-scheme:dark}.select option{background:#07162e;color:#f8fbff}.select option:disabled{color:#9aa6b9}

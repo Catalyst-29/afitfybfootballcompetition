@@ -35,7 +35,6 @@ export default function DashboardClient({ initial }: { initial: any }) {
   const [message, setMessage] = useState('');
   const [busy, setBusy] = useState(false);
   const [editing, setEditing] = useState<any | null>(null);
-  const [playerFormVersion, setPlayerFormVersion] = useState(0);
   const logoInput = useRef<HTMLInputElement>(null);
   const team = initial.team;
   const players = initial.players || [];
@@ -66,7 +65,6 @@ export default function DashboardClient({ initial }: { initial: any }) {
     const form = event.currentTarget;
     if (await postForm('/api/players', new FormData(form))) {
       form.reset();
-      setPlayerFormVersion((version) => version + 1);
     }
   }
   async function removePlayer(id: string) { if (!confirm('Remove this player?')) return; const response = await fetch('/api/players', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); const result = await response.json(); if (!response.ok) setMessage(result.error); else router.refresh(); }
@@ -101,21 +99,29 @@ export default function DashboardClient({ initial }: { initial: any }) {
         </section>
         <section className="grid registration-workspace">
           <div className="card player-registration-card">
-            <div className="section-title"><div><h2>Player registration</h2><div className="hint">JPEG only · 5MB max · Keep face centered</div></div><span className="status pending">{players.length}/25</span></div>
+            <div className="section-title"><h2>Player Registration</h2><span className="status pending">{players.length}/25</span></div>
             {!team ? <div className="error">Register your team logo before adding players.</div> : locked ? <div className="success error">Registration submitted. Player editing is locked while under review.</div> : players.length >= 25 ? <div className="success error">Maximum squad size reached.</div> : (
-              <form className="form-grid portrait-player-form" onSubmit={addPlayer}>
-                <div style={{ gridColumn: '1/-1' }} className="upload"><label className="label" style={{ marginTop: 0 }}>Player photo</label><input name="photo" type="file" accept="image/jpeg,.jpg,.jpeg" required /><div className="hint">Keep face centered · Use a clear background</div></div>
-                <div><label className="label">First name</label><input name="first_name" className="input" required /></div><div><label className="label">Last name</label><input name="last_name" className="input" required /></div>
-                <div><label className="label">Nationality</label><input className="input" value="Nigeria" readOnly /></div><DateOfBirthFields key={playerFormVersion} />
-                <div><label className="label">Jersey number</label><input name="jersey_number" className="input" type="number" min="1" max="99" required /></div><div><label className="label">Position</label><select name="position" className="select" required defaultValue=""><option value="" disabled>Select position</option><option>Goalkeeper</option><option>Defender</option><option>Midfielder</option><option>Forward</option></select></div>
-                <div><label className="label">Height (cm)</label><input name="height_cm" className="input" type="number" min="140" max="240" required /></div><div><label className="label">Preferred foot</label><select name="preferred_foot" className="select" required><option>Right</option><option>Left</option></select></div>
+              <form className="reference-player-form" onSubmit={addPlayer}>
+                <div className="reference-photo-panel">
+                  <label className="reference-photo-picker"><input name="photo" type="file" accept="image/jpeg,.jpg,.jpeg" required /><Camera size={38} /><span>Choose photo</span></label>
+                  <div className="reference-photo-guidance"><b>Recommended image:</b><br />150×150 px, JPEG only, max 5 MB. Keep face centered, clear background.</div>
+                </div>
+                <div className="reference-fields">
+                  <label className="visually-hidden" htmlFor="player-first-name">First name</label><input id="player-first-name" name="first_name" className="input" placeholder="First name *" required />
+                  <label className="visually-hidden" htmlFor="player-last-name">Last name</label><input id="player-last-name" name="last_name" className="input" placeholder="Last name *" required />
+                  <label className="visually-hidden" htmlFor="player-nationality">Nationality</label><input id="player-nationality" className="input" value="🇳🇬  Nigeria" readOnly aria-label="Nationality: Nigeria" />
+                  <label className="visually-hidden" htmlFor="player-dob">Date of birth</label><input id="player-dob" name="date_of_birth" className="input" type="date" required aria-label="Date of birth" />
+                  <label className="visually-hidden" htmlFor="player-jersey">Jersey number</label><input id="player-jersey" name="jersey_number" className="input" type="number" min="1" max="99" placeholder="Jersey number" required />
+                  <label className="visually-hidden" htmlFor="player-position">Position</label><select id="player-position" name="position" className="select" required defaultValue=""><option value="" disabled>Position</option><option>Goalkeeper</option><option>Defender</option><option>Midfielder</option><option>Forward</option></select>
+                  <div className="reference-field-pair"><div><label className="visually-hidden" htmlFor="player-height">Height</label><input id="player-height" name="height_cm" className="input" type="number" min="140" max="240" placeholder="Height (cm)" required /></div><div><label className="visually-hidden" htmlFor="player-foot">Preferred foot</label><select id="player-foot" name="preferred_foot" className="select" required defaultValue=""><option value="" disabled>Preferred foot</option><option>Right</option><option>Left</option></select></div></div>
+                </div>
                 <button className="btn" style={{ gridColumn: '1/-1' }} disabled={busy}><Plus size={16} /> Add player</button>
               </form>
             )}
           </div>
 
           <div className="card registered-players-card">
-            <div className="section-title"><div><h2>Registered players</h2><div className="hint">Approval decisions from competition administrators appear here.</div></div></div>
+            <div className="section-title"><h2>Registered Players</h2></div>
             <div className="players">{players.length === 0 ? <div className="muted">No players registered yet.</div> : players.map((player: any) => <div className="player" key={player.id}><img className="avatar" src={player.photo_url} alt={`${player.first_name} ${player.last_name}`} /><div><div className="player-name">#{player.jersey_number} · {player.first_name} {player.last_name}</div><div className="meta">{player.position} · {player.height_cm}cm · {player.preferred_foot} foot · Nigeria</div><div style={{ marginTop: 8 }}><Status value={player.status} /></div>{player.rejection_reason && <div className="reason"><CircleAlert size={12} style={{ verticalAlign: 'middle' }} /> {player.rejection_reason}</div>}</div><div className="actions">{!locked && player.status !== 'approved' && <><button className="btn secondary tiny" onClick={() => { setMessage(''); setEditing(player); }}><Pencil size={14} /> Edit</button><button className="btn danger tiny" onClick={() => removePlayer(player.id)}><Trash2 size={14} /> Remove</button></>}</div></div>)}</div>
             {!locked && <button className="btn full" style={{ marginTop: 20 }} onClick={submit} disabled={players.length < 20 || players.length > 25}>{players.length < 20 ? `Add ${20 - players.length} more player(s) to submit` : 'Final submit for admin review'}</button>}
           </div>

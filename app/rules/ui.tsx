@@ -61,12 +61,12 @@ export default function RulesClient({ departmentName }: { departmentName: string
 
         <header className="rules-heading">
           <span className="eyebrow"><ShieldCheck size={15} /> Required before registration</span>
-          <div className="rules-title"><div><div className="kicker">Tournament code of conduct</div><h1>Rules & Regulations</h1><p>Please read every rule carefully before continuing to team registration.</p></div></div>
+          <div className="rules-title"><div><div className="kicker">Tournament code of conduct</div></div></div>
         </header>
 
-        <div className="rules-content-heading"><span>Official tournament policy</span><h2>Competition Rules</h2><p>These regulations protect fair play, player safety and the integrity of the competition.</p></div>
+        <div className="rules-content-heading"><h2>Rules &amp; Regulations</h2><p>Please read every rule carefully before continuing to team registration.</p></div>
         <section className="card rules-card">
-          <ol className="rules-list">{rules.map((rule, index) => <li key={index}><span>{String(index + 1).padStart(2, '0')}</span><i className="rule-icon"><ShieldCheck size={23}/></i><p>{rule}</p><ShieldCheck className="rule-watermark" size={28}/></li>)}</ol>
+          <ul className="rules-list">{rules.map((rule, index) => <li key={index}><i className="rule-icon"><ShieldCheck size={23}/></i><p>{rule}</p><ShieldCheck className="rule-watermark" size={28}/></li>)}</ul>
         </section>
 
         <section className="card rules-consent"><ShieldCheck className="consent-emblem" size={52}/>

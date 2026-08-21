@@ -53,13 +53,12 @@ export default function TeamSetupClient({ departmentName }: { departmentName: st
             <div className="kicker">One final step</div>
             <h1>Add your Department Logo</h1>
             <p>Your logo identifies <b>{departmentName}</b> throughout the registration and approval process.</p>
-            <div className="setup-note"><ImagePlus size={22} /><span><b>Upload requirements</b><small>PNG format only · Maximum file size 5MB · Use a clear, official department mark</small></span></div>
           </div>
           <form className="card setup-card setup-upload-card" onSubmit={submitLogo}>
-            <div className="logo-preview">{preview ? <img src={preview} alt="Department logo preview" /> : <ImagePlus size={48} />}</div>
+            <label className="logo-preview clickable-logo-preview" htmlFor="department-logo">{preview ? <img src={preview} alt="Department logo preview" /> : <ImagePlus size={48} />}<span>{preview ? 'Change image' : 'Choose image'}</span></label>
             <div className="kicker">{departmentName}</div>
             <h2>Department Logo</h2>
-            <label className="upload logo-picker"><Upload size={18} /><span><b>{preview ? 'Replace PNG logo' : 'Choose a PNG logo'}</b><small>PNG only · Maximum 5 MB · Preview appears above.</small></span><input name="logo" type="file" accept="image/png" required onChange={(event) => selectLogo(event.target.files?.[0])} /></label>
+            <label className="upload logo-picker" htmlFor="department-logo"><Upload size={18} /><span><b>{preview ? 'Replace PNG logo' : 'Choose a PNG logo'}</b><small>PNG only · Maximum 5 MB · Preview appears above.</small></span></label><input id="department-logo" className="visually-hidden" name="logo" type="file" accept="image/png" required onChange={(event) => selectLogo(event.target.files?.[0])} />
             {error && <div className="error">{error}</div>}
             <button className="btn full" style={{ marginTop: 16 }} disabled={busy}>{busy ? 'Uploading…' : 'Upload logo & continue'}</button>
           </form>

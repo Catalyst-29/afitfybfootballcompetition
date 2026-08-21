@@ -2,9 +2,9 @@ import type { MetadataRoute } from 'next';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'AFIT Football',
-    short_name: 'AFIT Football',
-    description: 'AFIT Final Year Football Competition registration portal',
+    name: 'AFIT CUP 2026/2027',
+    short_name: 'AFIT CUP',
+    description: 'AFIT CUP registration portal',
     start_url: '/',
     scope: '/',
     display: 'standalone',

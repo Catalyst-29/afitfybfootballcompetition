@@ -1,11 +1,11 @@
 import './globals.css';
 import PwaRegister from './pwa-register';
 export const metadata={
-  title:'2026/2027 AFIT Final Year Competition',
-  description:'Official AFIT final year football competition registration portal',
-  applicationName:'AFIT Football',
+  title:'2026/2027 AFIT CUP',
+  description:'Official AFIT CUP registration portal',
+  applicationName:'AFIT CUP',
   manifest:'/manifest.webmanifest',
-  appleWebApp:{capable:true,statusBarStyle:'black-translucent',title:'AFIT Football'},
+  appleWebApp:{capable:true,statusBarStyle:'black-translucent',title:'AFIT CUP'},
   icons:{
     icon:[{url:'/icons/afit-192.png',sizes:'192x192',type:'image/png'}],
     apple:[{url:'/icons/afit-192.png',sizes:'192x192',type:'image/png'}],

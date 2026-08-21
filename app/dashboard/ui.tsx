@@ -1,133 +1,70 @@
 'use client';
 
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Camera, CircleAlert, LogOut, Pencil, Plus, ShieldCheck, Trash2, Users, X } from 'lucide-react';
+import { Camera, CircleAlert, ClipboardCheck, HelpCircle, ImagePlus, LayoutDashboard, LogOut, Menu, Pencil, Plus, Trash2, Users, X } from 'lucide-react';
+import { RegistrationProgress, RegistrationReview, SquadProgress, StatusBadge } from './components';
+import BrandLink from '../components/BrandLink';
+import DashboardBrand from '../components/DashboardBrand';
 
-const Status = ({ value }: { value: string }) => <span className={`status ${value}`}>{value}</span>;
+type Player = { id:string; first_name:string; last_name:string; date_of_birth:string; jersey_number:number; position:string; height_cm:number; preferred_foot:string; status:string; rejection_reason?:string|null; photo_url:string };
+type InitialData = { department:{name:string}; team:{status:string;final_submitted:boolean;rejection_reason?:string|null}; players:Player[]; logoUrl:string|null };
+type FieldErrors = Record<string,string>;
+const MAX_FILE_SIZE = 5*1024*1024;
 
-function DateOfBirthFields({ initial = '' }: { initial?: string }) {
-  const [day, setDay] = useState(initial ? String(Number(initial.slice(8, 10))) : '');
-  const [month, setMonth] = useState(initial ? String(Number(initial.slice(5, 7))) : '');
-  const [year, setYear] = useState(initial ? initial.slice(0, 4) : '');
-  const currentYear = new Date().getFullYear();
-  const years = Array.from({ length: currentYear - 1949 }, (_, index) => currentYear - index);
-  const daysInMonth = month && year ? new Date(Number(year), Number(month), 0).getDate() : 31;
-  const days = Array.from({ length: daysInMonth }, (_, index) => index + 1);
-  const validDay = day && Number(day) <= daysInMonth ? day : '';
-  const value = validDay && month && year ? `${year}-${month.padStart(2, '0')}-${validDay.padStart(2, '0')}` : '';
+function validatePhoto(file?:File, required=true) { if(!file||file.size===0)return required?'Player photo is required.':''; if(!['image/jpeg','image/jpg'].includes(file.type))return 'Player photo must be a JPEG image.'; if(file.size>MAX_FILE_SIZE)return 'Maximum photo size is 5 MB.'; return ''; }
+function validateForm(form:HTMLFormElement, players:Player[], editingId?:string) { const data=new FormData(form); const errors:FieldErrors={}; for(const field of ['first_name','last_name','date_of_birth','jersey_number','position','height_cm','preferred_foot']) if(!String(data.get(field)||'').trim()) errors[field]=field==='date_of_birth'?'Date of birth is required.':field==='position'?'Please select a playing position.':'This field is required.'; const jersey=Number(data.get('jersey_number')); if(jersey&&players.some(p=>p.id!==editingId&&p.jersey_number===jersey))errors.jersey_number='This jersey number is already assigned to another player.'; const photo=data.get('photo'); const photoError=validatePhoto(photo instanceof File?photo:undefined,!editingId); if(photoError)errors.photo=photoError; return errors; }
+function FieldError({name,errors}:{name:string;errors:FieldErrors}) { return errors[name]?<span className="field-error" role="alert">{errors[name]}</span>:null; }
 
-  return (
-    <div className="dob-group">
-      <label className="label">Date of birth</label>
-      <div className="dob-fields">
-        <select className="select" value={validDay} onChange={(event) => setDay(event.target.value)} required aria-label="Birth day"><option value="">Day</option>{days.map((item) => <option key={item} value={item}>{item}</option>)}</select>
-        <select className="select" value={month} onChange={(event) => setMonth(event.target.value)} required aria-label="Birth month"><option value="">Month</option><option value="1">January</option><option value="2">February</option><option value="3">March</option><option value="4">April</option><option value="5">May</option><option value="6">June</option><option value="7">July</option><option value="8">August</option><option value="9">September</option><option value="10">October</option><option value="11">November</option><option value="12">December</option></select>
-        <select className="select" value={year} onChange={(event) => setYear(event.target.value)} required aria-label="Birth year"><option value="">Year</option>{years.map((item) => <option key={item} value={item}>{item}</option>)}</select>
-      </div>
-      <input type="hidden" name="date_of_birth" value={value} />
-    </div>
-  );
-}
+export default function DashboardClient({initial}:{initial:InitialData}) {
+  const router=useRouter(); const [notice,setNotice]=useState<{type:'error'|'success';text:string}|null>(null); const [busyAction,setBusyAction]=useState(''); const [editing,setEditing]=useState<Player|null>(null); const [errors,setErrors]=useState<FieldErrors>({}); const [photoPreview,setPhotoPreview]=useState(''); const [editPhotoPreview,setEditPhotoPreview]=useState(''); const [navigationOpen,setNavigationOpen]=useState(false); const [activeSection,setActiveSection]=useState<'dashboard'|'team'|'add'|'players'|'review'>('dashboard'); const logoInput=useRef<HTMLInputElement>(null);
+ const players=initial.players||[]; const locked=!!initial.team?.final_submitted; const allApproved=players.length>0&&players.every(p=>p.status==='approved'); const registrationStatus=initial.team?.status==='rejected'?'rejected':initial.team?.status==='approved'&&allApproved?'approved':'pending';
+ useEffect(()=>{if(notice?.type!=='success')return;const timer=window.setTimeout(()=>setNotice(null),5000);return()=>window.clearTimeout(timer);},[notice]);
+ function showPreview(file:File|undefined,setter:(v:string)=>void,required=true){const error=validatePhoto(file,required);setErrors(e=>({...e,photo:error}));if(error||!file){setter('');return;}setter(URL.createObjectURL(file));}
+ async function request(path:string,options:RequestInit,action:string){setBusyAction(action);setNotice(null);try{const response=await fetch(path,options);const result=await response.json().catch(()=>({}));if(!response.ok){setNotice({type:'error',text:result.error||'The request could not be completed. Please try again.'});return false;}router.refresh();return true;}catch{setNotice({type:'error',text:'Unable to connect. Check your internet connection and try again.'});return false;}finally{setBusyAction('');}}
+ async function updateTeamLogo(e:React.ChangeEvent<HTMLInputElement>){const file=e.target.files?.[0];if(!file)return;if(file.type!=='image/png'||file.size>MAX_FILE_SIZE){setNotice({type:'error',text:file.type!=='image/png'?'Team logo must be a PNG image.':'Maximum logo size is 5 MB.'});e.target.value='';return;}const form=new FormData();form.set('logo',file);if(await request('/api/team',{method:'POST',body:form},'logo'))setNotice({type:'success',text:'Team logo updated successfully.'});e.target.value='';}
+ async function addPlayer(e:React.FormEvent<HTMLFormElement>){e.preventDefault();const form=e.currentTarget;const next=validateForm(form,players);setErrors(next);if(Object.keys(next).length){setNotice({type:'error',text:'Please correct the highlighted fields.'});return;}if(await request('/api/players',{method:'POST',body:new FormData(form)},'add')){form.reset();setPhotoPreview('');setErrors({});const count=players.length+1;setNotice({type:'success',text:`Player saved successfully — ${Math.min(count,20)} of 20 minimum completed.`});}}
+ async function removePlayer(id:string){if(!confirm('Remove this player from the squad? This cannot be undone.'))return;if(await request('/api/players',{method:'DELETE',headers:{'Content-Type':'application/json'},body:JSON.stringify({id})},`remove-${id}`))setNotice({type:'success',text:'Player removed successfully.'});}
+ async function editPlayer(e:React.FormEvent<HTMLFormElement>){e.preventDefault();if(!editing)return;const form=e.currentTarget;const next=validateForm(form,players,editing.id);setErrors(next);if(Object.keys(next).length)return;if(await request('/api/players',{method:'PATCH',body:new FormData(form)},'edit')){setEditing(null);setEditPhotoPreview('');setErrors({});setNotice({type:'success',text:'Player changes saved successfully.'});}}
+ async function submitRegistration(){if(!confirm('Submit this squad for admin review? Player and team editing will be locked.'))return;if(await request('/api/submit',{method:'POST'},'submit'))setNotice({type:'success',text:'Registration submitted successfully.'});}
+ async function logout(){if(!confirm('Are you sure you want to log out?'))return;await request('/api/logout',{method:'POST'},'logout');router.push('/');router.refresh();}
 
-export default function DashboardClient({ initial }: { initial: any }) {
-  const router = useRouter();
-  const [message, setMessage] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [editing, setEditing] = useState<any | null>(null);
-  const logoInput = useRef<HTMLInputElement>(null);
-  const team = initial.team;
-  const players = initial.players || [];
-  const locked = !!team?.final_submitted;
-  const allPlayersApproved = players.length > 0 && players.every((player: any) => player.status === 'approved');
-  const registrationStatus = team?.status === 'rejected' ? 'rejected' : team?.status === 'approved' && allPlayersApproved ? 'approved' : 'pending';
+ const playerFields=(p?:Player)=><>
+  <div className="form-field"><label htmlFor={p?'edit-first':'player-first'}>First name</label><input id={p?'edit-first':'player-first'} name="first_name" className="input" defaultValue={p?.first_name} aria-invalid={!!errors.first_name} required/><FieldError name="first_name" errors={errors}/></div>
+  <div className="form-field"><label htmlFor={p?'edit-last':'player-last'}>Last name</label><input id={p?'edit-last':'player-last'} name="last_name" className="input" defaultValue={p?.last_name} aria-invalid={!!errors.last_name} required/><FieldError name="last_name" errors={errors}/></div>
+  <div className="form-field"><label>Nationality</label><input className="input" value="Nigeria" readOnly/></div>
+  <div className="form-field"><label htmlFor={p?'edit-dob':'player-dob'}>Date of birth</label><input id={p?'edit-dob':'player-dob'} name="date_of_birth" className="input" type="date" defaultValue={p?.date_of_birth} aria-invalid={!!errors.date_of_birth} required/><FieldError name="date_of_birth" errors={errors}/></div>
+  <div className="form-field"><label htmlFor={p?'edit-jersey':'player-jersey'}>Jersey number</label><input id={p?'edit-jersey':'player-jersey'} name="jersey_number" className="input" type="number" min="1" max="99" defaultValue={p?.jersey_number} aria-invalid={!!errors.jersey_number} required/><FieldError name="jersey_number" errors={errors}/></div>
+  <div className="form-field"><label htmlFor={p?'edit-position':'player-position'}>Position</label><select id={p?'edit-position':'player-position'} name="position" className="select" defaultValue={p?.position||''} aria-invalid={!!errors.position} required><option value="" disabled>Select position</option><option>Goalkeeper</option><option>Defender</option><option>Midfielder</option><option>Forward</option></select><FieldError name="position" errors={errors}/></div>
+  <div className="form-field"><label htmlFor={p?'edit-height':'player-height'}>Height (cm)</label><input id={p?'edit-height':'player-height'} name="height_cm" className="input" type="number" min="140" max="240" defaultValue={p?.height_cm} aria-invalid={!!errors.height_cm} required/><FieldError name="height_cm" errors={errors}/></div>
+  <div className="form-field"><label htmlFor={p?'edit-foot':'player-foot'}>Preferred foot</label><select id={p?'edit-foot':'player-foot'} name="preferred_foot" className="select" defaultValue={p?.preferred_foot||''} aria-invalid={!!errors.preferred_foot} required><option value="" disabled>Select preferred foot</option><option>Right</option><option>Left</option></select><FieldError name="preferred_foot" errors={errors}/></div>
+ </>;
 
-  async function postForm(path: string, form: FormData) {
-    setBusy(true);
-    setMessage('');
-    const response = await fetch(path, { method: 'POST', body: form });
-    const result = await response.json();
-    setBusy(false);
-    if (!response.ok) { setMessage(result.error); return false; }
-    router.refresh();
-    return true;
-  }
-  async function updateTeamLogo(event: React.ChangeEvent<HTMLInputElement>) {
-    const file = event.target.files?.[0];
-    if (!file) return;
-    const form = new FormData();
-    form.set('logo', file);
-    await postForm('/api/team', form);
-    event.target.value = '';
-  }
-  async function addPlayer(event: React.FormEvent<HTMLFormElement>) {
-    event.preventDefault();
-    const form = event.currentTarget;
-    if (await postForm('/api/players', new FormData(form))) {
-      form.reset();
-    }
-  }
-  async function removePlayer(id: string) { if (!confirm('Remove this player?')) return; const response = await fetch('/api/players', { method: 'DELETE', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ id }) }); const result = await response.json(); if (!response.ok) setMessage(result.error); else router.refresh(); }
-  async function editPlayer(event: React.FormEvent<HTMLFormElement>) { event.preventDefault(); setBusy(true); setMessage(''); const response = await fetch('/api/players', { method: 'PATCH', body: new FormData(event.currentTarget) }); const result = await response.json(); setBusy(false); if (!response.ok) { setMessage(result.error); return; } setEditing(null); router.refresh(); }
-  async function submit() { if (!confirm('Final submission will lock team editing while the registration is under review. Continue?')) return; const response = await fetch('/api/submit', { method: 'POST' }); const result = await response.json(); if (!response.ok) setMessage(result.error); else router.refresh(); }
-  async function logout() { await fetch('/api/logout', { method: 'POST' }); router.push('/'); router.refresh(); }
-
-  return (
-    <main className="shell dashboard">
-      <div className="container page-content">
-        <nav className="nav">
-          <a className="brand" href="/" aria-label="Go to homepage"><img className="brand-logo" src="/afit-logo-transparent.png" alt="AFIT crest" /><div><span>AFIT Final Year Competition</span><small>2026/2027 Session</small></div></a>
-          <button className="btn secondary tiny" onClick={logout}><LogOut size={14} /> Logout</button>
-        </nav>
-        <header className="dash-head compact-dash-head">
-          <div className="department-heading compact-department-heading">
-            <button className="department-logo-button" type="button" onClick={() => !locked && logoInput.current?.click()} disabled={locked || busy} title={locked ? 'Logo editing is locked after submission' : 'Click to update department logo'}>
-              {initial.logoUrl && <img src={initial.logoUrl} alt={`${initial.department.name} logo`} />}
-              {!locked && <span><Camera size={14} /> Change</span>}
-            </button>
-            <input ref={logoInput} className="visually-hidden" type="file" accept="image/png" onChange={updateTeamLogo} />
-            <div className="department-title-block"><h1>{initial.department.name}</h1><div className="inline-registration-status"><b>Registration Status:</b> <Status value={registrationStatus} /></div></div>
-          </div>
-          <div className="actions">{locked && <span className="status approved"><ShieldCheck size={14} /> Final submission received</span>}</div>
-          {team?.rejection_reason && <div className="error" style={{ maxWidth: 680 }}><b>Team review:</b> {team.rejection_reason}</div>}
-        </header>
-        {message && <div className="error" style={{ marginBottom: 18 }}>{message}</div>}
-        <section className="dashboard-summary-row">
-          <div className="compact-player-stat"><span>Approved players</span><b>{players.filter((player: any) => player.status === 'approved').length}</b></div>
-          <div className="compact-player-stat rejected-count"><span>Rejected players</span><b>{players.filter((player: any) => player.status === 'rejected').length}</b></div>
-          <div className="squad-counter"><Users size={14} /> {players.length}/25 registered</div>
-        </section>
-        <section className="grid registration-workspace">
-          <div className="card player-registration-card">
-            <div className="section-title"><h2>Player Registration</h2><span className="status pending">{players.length}/25</span></div>
-            {!team ? <div className="error">Register your team logo before adding players.</div> : locked ? <div className="success error">Registration submitted. Player editing is locked while under review.</div> : players.length >= 25 ? <div className="success error">Maximum squad size reached.</div> : (
-              <form className="reference-player-form" onSubmit={addPlayer}>
-                <div className="reference-photo-panel">
-                  <label className="reference-photo-picker"><input name="photo" type="file" accept="image/jpeg,.jpg,.jpeg" required /><Camera size={38} /><span>Choose photo</span></label>
-                  <div className="reference-photo-guidance"><b>Recommended image:</b><br />150×150 px, JPEG only, max 5 MB. Keep face centered, clear background.</div>
-                </div>
-                <div className="reference-fields">
-                  <label className="visually-hidden" htmlFor="player-first-name">First name</label><input id="player-first-name" name="first_name" className="input" placeholder="First name *" required />
-                  <label className="visually-hidden" htmlFor="player-last-name">Last name</label><input id="player-last-name" name="last_name" className="input" placeholder="Last name *" required />
-                  <label className="visually-hidden" htmlFor="player-nationality">Nationality</label><input id="player-nationality" className="input" value="🇳🇬  Nigeria" readOnly aria-label="Nationality: Nigeria" />
-                  <div className="reference-date-field"><label htmlFor="player-dob">Date Of Birth</label><input id="player-dob" name="date_of_birth" type="date" required aria-label="Date Of Birth" /></div>
-                  <label className="visually-hidden" htmlFor="player-jersey">Jersey number</label><input id="player-jersey" name="jersey_number" className="input" type="number" min="1" max="99" placeholder="Jersey number" required />
-                  <label className="visually-hidden" htmlFor="player-position">Position</label><select id="player-position" name="position" className="select" required defaultValue=""><option value="" disabled>Position</option><option>Goalkeeper</option><option>Defender</option><option>Midfielder</option><option>Forward</option></select>
-                  <div className="reference-field-pair"><div><label className="visually-hidden" htmlFor="player-height">Height</label><input id="player-height" name="height_cm" className="input" type="number" min="140" max="240" placeholder="Height (cm)" required /></div><div><label className="visually-hidden" htmlFor="player-foot">Preferred foot</label><select id="player-foot" name="preferred_foot" className="select" required defaultValue=""><option value="" disabled>Preferred foot</option><option>Right</option><option>Left</option></select></div></div>
-                </div>
-                <button className="btn" style={{ gridColumn: '1/-1' }} disabled={busy}><Plus size={16} /> Add player</button>
-              </form>
-            )}
-          </div>
-
-          <div className="card registered-players-card">
-            <div className="section-title"><h2>Registered Players</h2></div>
-            <div className="players">{players.length === 0 ? <div className="muted">No players registered yet.</div> : players.map((player: any) => <div className="player" key={player.id}><img className="avatar" src={player.photo_url} alt={`${player.first_name} ${player.last_name}`} /><div><div className="player-name">#{player.jersey_number} · {player.first_name} {player.last_name}</div><div className="meta">{player.position} · {player.height_cm}cm · {player.preferred_foot} foot · Nigeria</div><div style={{ marginTop: 8 }}><Status value={player.status} /></div>{player.rejection_reason && <div className="reason"><CircleAlert size={12} style={{ verticalAlign: 'middle' }} /> {player.rejection_reason}</div>}</div><div className="actions">{!locked && player.status !== 'approved' && <><button className="btn secondary tiny" onClick={() => { setMessage(''); setEditing(player); }}><Pencil size={14} /> Edit</button><button className="btn danger tiny" onClick={() => removePlayer(player.id)}><Trash2 size={14} /> Remove</button></>}</div></div>)}</div>
-            {!locked && <button className="btn full" style={{ marginTop: 20 }} onClick={submit} disabled={players.length < 20 || players.length > 25}>{players.length < 20 ? `Add ${20 - players.length} more player(s) to submit` : 'Final submit for admin review'}</button>}
-          </div>
-        </section>
-        {editing && <div className="edit-modal" role="dialog" aria-modal="true" aria-label="Edit player"><form className="card edit-player-card" onSubmit={editPlayer}><div className="section-title"><div><div className="kicker">Update squad member</div><h2>Edit player information</h2></div><button type="button" className="icon-button" onClick={() => setEditing(null)} aria-label="Close"><X size={20} /></button></div><input type="hidden" name="id" value={editing.id} /><div className="form-grid"><div style={{ gridColumn: '1/-1' }} className="upload"><label className="label" style={{ marginTop: 0 }}>Replace player photo <span className="hint">(optional)</span></label><input name="photo" type="file" accept="image/jpeg,.jpg,.jpeg" /><div className="hint">Leave empty to keep the current photo · JPEG only · Maximum 5MB</div></div><div><label className="label">First name</label><input name="first_name" className="input" defaultValue={editing.first_name} required /></div><div><label className="label">Last name</label><input name="last_name" className="input" defaultValue={editing.last_name} required /></div><div><label className="label">Nationality</label><input className="input" value="Nigeria" readOnly /></div><DateOfBirthFields key={editing.id} initial={editing.date_of_birth} /><div><label className="label">Jersey number</label><input name="jersey_number" className="input" type="number" min="1" max="99" defaultValue={editing.jersey_number} required /></div><div><label className="label">Position</label><select name="position" className="select" defaultValue={editing.position} required><option>Goalkeeper</option><option>Defender</option><option>Midfielder</option><option>Forward</option></select></div><div><label className="label">Height (cm)</label><input name="height_cm" className="input" type="number" min="140" max="240" defaultValue={editing.height_cm} required /></div><div><label className="label">Preferred foot</label><select name="preferred_foot" className="select" defaultValue={editing.preferred_foot} required><option>Right</option><option>Left</option></select></div></div>{message && <div className="error">{message}</div>}<div className="edit-actions"><button type="button" className="btn secondary" onClick={() => setEditing(null)}>Cancel</button><button className="btn" disabled={busy}>{busy ? 'Saving…' : 'Save changes'}</button></div></form></div>}
-      </div>
-    </main>
-  );
+ const approvedCount=players.filter(player=>player.status==='approved').length;
+ const pendingCount=players.filter(player=>player.status==='pending').length;
+ const rejectedCount=players.filter(player=>player.status==='rejected').length;
+ return <main className={`department-shell section-${activeSection}`}>
+  <header className="app-topbar"><BrandLink /><div className="topbar-department"><button className="dashboard-menu-button" type="button" onClick={()=>setNavigationOpen(true)} aria-label="Open dashboard navigation" aria-expanded={navigationOpen}><Menu size={19}/></button>{initial.logoUrl?<img className="topbar-department-logo" src={initial.logoUrl} alt={`${initial.department.name} logo`}/>:<span>{initial.department.name.slice(0,2).toUpperCase()}</span>}<b>{initial.department.name}</b><button type="button" onClick={logout} disabled={!!busyAction} aria-label="Log out"><LogOut size={17}/></button></div></header>
+  <div className="dashboard-frame">
+    {navigationOpen&&<button className="dashboard-nav-backdrop" type="button" onClick={()=>setNavigationOpen(false)} aria-label="Close dashboard navigation"/>}<aside className={`dashboard-sidebar${navigationOpen?' open':''}`} aria-label="Registration navigation"><button className="dashboard-nav-close" type="button" onClick={()=>setNavigationOpen(false)} aria-label="Close navigation"><X/></button><DashboardBrand/><nav><button className={activeSection==='dashboard'?'active':''} type="button" onClick={()=>{setActiveSection('dashboard');setNavigationOpen(false)}}><LayoutDashboard/> Dashboard</button><button className={activeSection==='add'?'active':''} type="button" onClick={()=>{setActiveSection('add');setNavigationOpen(false)}}><Plus/> Add Player</button><button className={activeSection==='players'?'active':''} type="button" onClick={()=>{setActiveSection('players');setNavigationOpen(false)}}><Users/> Players</button><button className={activeSection==='review'?'active':''} type="button" onClick={()=>{setActiveSection('review');setNavigationOpen(false)}}><ClipboardCheck/> Review & Submit</button></nav><div><a href="mailto:support@afit.edu.ng"><HelpCircle/> Help & Support</a><button type="button" onClick={logout} disabled={!!busyAction}><LogOut/> Logout</button></div></aside>
+   <div className="department-page" id="dashboard-overview">
+  {(activeSection==='dashboard'||activeSection==='team')&&<header className="department-header"><div className="welcome-block"><div><span>{activeSection==='dashboard'?'Welcome Back':'Team Registration'}</span><h1>{initial.department.name}</h1><StatusBadge value={registrationStatus}/><p>{activeSection==='dashboard'?'Complete your squad registration and submit before the deadline.':'Review or update your registered department logo.'}</p></div><div className="team-identity-card"><button className="department-logo-button" type="button" onClick={()=>!locked&&logoInput.current?.click()} disabled={locked||!!busyAction} aria-label={locked?'Team logo editing is locked':'Replace team logo'}>{initial.logoUrl?<img src={initial.logoUrl} alt={`${initial.department.name} logo`}/>:<ImagePlus/>}{!locked&&<span><Camera size={13}/> Change</span>}</button><input ref={logoInput} className="visually-hidden" type="file" accept="image/png" onChange={updateTeamLogo}/><div><b>{initial.department.name}</b></div></div></div></header>}
+  {initial.team.rejection_reason&&<div className="notice notice-error"><CircleAlert size={18}/><span><b>Team review:</b> {initial.team.rejection_reason}</span></div>}
+  {notice&&<div className={`notice notice-${notice.type}`} role={notice.type==='error'?'alert':'status'}><span>{notice.text}</span><button type="button" onClick={()=>setNotice(null)} aria-label="Dismiss message"><X size={16}/></button></div>}
+   {activeSection==='dashboard'&&<><RegistrationProgress playerCount={players.length} submitted={locked}/><div className="dashboard-overview-grid"><SquadProgress count={players.length} approved={approvedCount} pending={pendingCount} rejected={rejectedCount}/><section className="registration-status-card" aria-labelledby="registration-status-title"><h2 id="registration-status-title">Registration Status</h2><dl><div><dt>Players Registered</dt><dd>{players.length}</dd></div><div><dt>Approved Players</dt><dd className="approved-value">{approvedCount}</dd></div><div><dt>Pending Approval</dt><dd className="pending-value">{pendingCount}</dd></div><div><dt>Rejected Players</dt><dd className="rejected-value">{rejectedCount}</dd></div><div><dt>Minimum Required</dt><dd>20</dd></div><div><dt>Maximum Allowed</dt><dd>25</dd></div><div><dt>Status</dt><dd><StatusBadge value={registrationStatus}/></dd></div></dl><p>{locked?'Registration submitted for review.':approvedCount<20?<>You need <b>{20-approvedCount} more approved players</b> to meet the minimum requirement.</>:'Your approved squad meets the minimum requirement and is ready for review.'}</p></section></div><div className="dashboard-primary-actions"><button className="btn primary-action" type="button" onClick={()=>setActiveSection('add')}><Plus size={17}/> Add player</button><button className="btn secondary" type="button" onClick={()=>setActiveSection('players')}><Users size={17}/> View players</button><button className="btn review-action" type="button" onClick={()=>setActiveSection('review')}><ClipboardCheck size={17}/> Review & Submit</button></div></>}
+   {(activeSection==='add'||activeSection==='players')&&<div className={`department-workspace single-workspace ${activeSection}`} id="players">
+    <section className="card add-player-card" id="add-player"><div className="section-title"><div><h2>Add player</h2></div><span>{players.length}/25</span></div>
+    {locked?<div className="review-notice">Registration is submitted and editing is locked.</div>:players.length>=25?<div className="review-notice success-notice">Maximum squad size reached.</div>:<form className="player-form" onSubmit={addPlayer} noValidate>
+     <div className="photo-upload-field"><label className={`photo-picker ${errors.photo?'has-error':''}`}>{photoPreview?<img src={photoPreview} alt="Selected player preview"/>:<><Camera size={34}/><b>Choose photo</b></>}<input name="photo" type="file" accept="image/jpeg,.jpg,.jpeg" onChange={e=>showPreview(e.target.files?.[0],setPhotoPreview)} required/></label><div><b>Player photo</b><p>JPEG only · Maximum 5 MB</p><p>Keep face centered, clear background.</p>{photoPreview&&<span className="replace-hint">Tap the preview to replace image</span>}<FieldError name="photo" errors={errors}/></div></div>
+     <div className="player-form-grid">{playerFields()}</div><button className="btn primary-action full" disabled={!!busyAction}><Plus size={17}/>{busyAction==='add'?'Saving player...':'Save player'}</button>
+    </form>}
+   </section>
+   <section className="card player-list-card"><div className="section-title"><div><div className="kicker">Squad list</div><h2>Registered players</h2></div><b>{players.length}</b></div><div className="player-card-list">{players.length===0?<div className="empty-player-list"><Camera size={28}/><b>No players registered yet</b><span>Add the first player to begin building your squad.</span></div>:players.map(p=><article className="player-card" key={p.id}><img src={p.photo_url} alt={`${p.first_name} ${p.last_name}`}/><div className="player-card-info"><h3><span>{String(p.jersey_number).padStart(2,'0')}</span>{p.first_name} {p.last_name}</h3><p>{p.position} · {p.preferred_foot} foot</p><StatusBadge value={p.status}/>{p.rejection_reason&&<div className="player-reason"><CircleAlert size={14}/> {p.rejection_reason}</div>}</div>{!locked&&p.status!=='approved'&&<div className="player-actions"><button className="btn secondary tiny" type="button" onClick={()=>{setErrors({});setEditing(p);}}><Pencil size={14}/> Edit</button><button className="btn danger tiny" type="button" onClick={()=>removePlayer(p.id)} disabled={busyAction===`remove-${p.id}`}><Trash2 size={14}/> {busyAction===`remove-${p.id}`?'Removing...':'Remove'}</button></div>}</article>)}</div></section>
+  </div>}
+  {activeSection==='review'&&<RegistrationReview department={initial.department.name} logoUrl={initial.logoUrl} players={players} submitted={locked} onSubmit={submitRegistration} onBack={()=>setActiveSection('dashboard')} onChangeLogo={()=>setActiveSection('team')} busy={busyAction==='submit'}/>} 
+   {!locked&&players.length<25&&activeSection==='players'&&<button className="mobile-add-player" type="button" onClick={()=>setActiveSection('add')}><Plus size={19}/> Add player</button>}
+  {editing&&<div className="edit-modal" role="dialog" aria-modal="true" aria-labelledby="edit-title"><form className="card edit-player-card" onSubmit={editPlayer} noValidate><div className="section-title"><div><div className="kicker">Update squad member</div><h2 id="edit-title">Edit player</h2></div><button type="button" className="icon-button" onClick={()=>setEditing(null)} aria-label="Close"><X size={20}/></button></div><input type="hidden" name="id" value={editing.id}/><div className="edit-photo-row"><img src={editPhotoPreview||editing.photo_url} alt={`${editing.first_name} ${editing.last_name}`}/><label className="btn secondary">Replace image<input name="photo" type="file" accept="image/jpeg,.jpg,.jpeg" onChange={e=>showPreview(e.target.files?.[0],setEditPhotoPreview,false)}/></label><span>JPEG only · Maximum 5 MB</span><FieldError name="photo" errors={errors}/></div><div className="player-form-grid">{playerFields(editing)}</div>{notice?.type==='error'&&<div className="notice notice-error">{notice.text}</div>}<div className="edit-actions"><button type="button" className="btn secondary" onClick={()=>setEditing(null)}>Cancel</button><button className="btn" disabled={!!busyAction}>{busyAction==='edit'?'Saving changes...':'Save changes'}</button></div></form></div>}
+   </div>
+  </div>
+ </main>;
 }

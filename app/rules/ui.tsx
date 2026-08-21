@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { ArrowRight, LogOut, Scale, ShieldCheck } from 'lucide-react';
+import BrandLink from '../components/BrandLink';
 
 const rules = [
   'All FIFA standard rules apply.',
@@ -44,6 +45,7 @@ export default function RulesClient({ departmentName }: { departmentName: string
   }
 
   async function declineRules() {
+    if (!confirm('Are you sure you want to leave registration and log out?')) return;
     await fetch('/api/logout', { method: 'POST' });
     router.push('/');
     router.refresh();
@@ -52,21 +54,22 @@ export default function RulesClient({ departmentName }: { departmentName: string
   return (
     <main className="shell rules-shell">
       <div className="container page-content">
-        <nav className="nav">
-          <a className="brand" href="/" aria-label="Go to homepage"><img className="brand-logo" src="/afit-logo-transparent.png" alt="AFIT crest" /><div><span>AFIT Final Year Competition</span><small>2026/2027 Session</small></div></a>
-          <button className="btn secondary tiny" onClick={declineRules}><LogOut size={14} /> Exit</button>
+        <nav className="nav rules-nav">
+          <BrandLink />
+          <div className="rules-nav-actions"><div className="department-chip"><Scale size={18} /><span><small>Registering department</small><b>{departmentName}</b></span></div><button className="btn secondary tiny" onClick={declineRules}><LogOut size={14} /> Exit</button></div>
         </nav>
 
         <header className="rules-heading">
           <span className="eyebrow"><ShieldCheck size={15} /> Required before registration</span>
-          <div className="rules-title"><div><div className="kicker">Tournament code of conduct</div><h1>Rules & Regulations</h1><p>Please read every rule carefully before continuing to team registration.</p></div><div className="department-chip"><Scale size={18} /><span><small>Registering department</small><b>{departmentName}</b></span></div></div>
+          <div className="rules-title"><div><div className="kicker">Tournament code of conduct</div><h1>Rules & Regulations</h1><p>Please read every rule carefully before continuing to team registration.</p></div></div>
         </header>
 
+        <div className="rules-content-heading"><span>Official tournament policy</span><h2>Competition Rules</h2><p>These regulations protect fair play, player safety and the integrity of the competition.</p></div>
         <section className="card rules-card">
-          <ol className="rules-list">{rules.map((rule, index) => <li key={index}><span>{String(index + 1).padStart(2, '0')}</span><p>{rule}</p></li>)}</ol>
+          <ol className="rules-list">{rules.map((rule, index) => <li key={index}><span>{String(index + 1).padStart(2, '0')}</span><i className="rule-icon"><ShieldCheck size={23}/></i><p>{rule}</p><ShieldCheck className="rule-watermark" size={28}/></li>)}</ol>
         </section>
 
-        <section className="card rules-consent">
+        <section className="card rules-consent"><ShieldCheck className="consent-emblem" size={52}/>
           <label className="consent-check"><input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} /><span><b>I have read and agree to the tournament rules and regulations.</b><small>I understand that violations may lead to penalties or disqualification.</small></span></label>
           {error && <div className="error">{error}</div>}
           <div className="rules-actions"><button className="btn secondary" onClick={declineRules}>I do not agree</button><button className="btn" disabled={!agreed || busy} onClick={acceptRules}>{busy ? 'Saving…' : <>Agree & continue <ArrowRight size={17} /></>}</button></div>

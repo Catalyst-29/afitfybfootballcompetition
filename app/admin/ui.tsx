@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Download, LogOut, Search, ShieldCheck } from 'lucide-react';
+import { Building2, ClipboardCheck, Download, LayoutDashboard, LogOut, Search, ShieldCheck, UserCheck, Users } from 'lucide-react';
+import BrandLink from '../components/BrandLink';
+import DashboardBrand from '../components/DashboardBrand';
 
 const Status = ({ value }: { value: string }) => <span className={`status ${value}`}>{value}</span>;
 const effectiveTeamStatus = (team: any) => team.status === 'rejected' ? 'rejected' : team.status === 'approved' && team.players.length > 0 && team.players.every((player: any) => player.status === 'approved') ? 'approved' : 'pending';
@@ -27,6 +29,13 @@ export default function AdminClient({ authenticated, teams }: { authenticated: b
   );
   const selected = departments.find((team) => team.id === selectedId) || null;
   const pendingTeams = departments.filter((team) => effectiveTeamStatus(team) === 'pending').length;
+  const allPlayers = departments.flatMap((team) => team.players);
+  const totalPlayers = allPlayers.length;
+  const approvedPlayers = allPlayers.filter((player: any) => player.status === 'approved').length;
+  const pendingPlayers = allPlayers.filter((player: any) => player.status === 'pending').length;
+  const rejectedPlayers = allPlayers.filter((player: any) => player.status === 'rejected').length;
+  const approvedPercent = totalPlayers ? approvedPlayers / totalPlayers * 100 : 0;
+  const pendingPercent = totalPlayers ? pendingPlayers / totalPlayers * 100 : 0;
 
   async function login(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -59,21 +68,22 @@ export default function AdminClient({ authenticated, teams }: { authenticated: b
     }
   }
 
-  async function logout() { await fetch('/api/admin-logout', { method: 'POST' }); router.refresh(); }
+  async function logout() { if (!confirm('Are you sure you want to log out of the admin dashboard?')) return; await fetch('/api/admin-logout', { method: 'POST' }); router.refresh(); }
 
   if (!authenticated) return (
-    <main className="shell"><div className="container page-content"><nav className="nav"><a className="brand" href="/" aria-label="Go to homepage"><img className="brand-logo" src="/afit-logo-transparent.png" alt="AFIT crest" /><div><span>AFIT Competition Admin</span><small>2026/2027 Session</small></div></a></nav><section className="hero" style={{ gridTemplateColumns: '1fr', maxWidth: 520, margin: '0 auto' }}><form className="card login-card" onSubmit={login}><div className="kicker">Administrator access</div><h1 style={{ fontSize: 38, margin: '12px 0' }}>Review registrations</h1><label className="label">Admin password</label><input name="password" className="input" type="password" required /><button className="btn full" style={{ marginTop: 14 }}>Open dashboard</button>{error && <div className="error">{error}</div>}</form></section></div></main>
+    <main className="shell admin-login-shell"><div className="stadium-wash"/><div className="container page-content"><nav className="nav admin-nav"><BrandLink /></nav><section className="admin-login-wrap"><div className="admin-login-copy"><span className="eyebrow"><ShieldCheck size={15}/> Secure administration</span><div className="kicker">AFIT competition control</div><h1>Registration<br/>Review Portal</h1><p>Review department registrations, verify player information and manage approval decisions.</p></div><form className="card login-card admin-login-card" onSubmit={login}><ShieldCheck className="admin-login-icon" size={30}/><div className="kicker">Administrator access</div><h2>Sign in to continue</h2><p>Enter the competition administrator password.</p><label className="label">Admin password</label><input name="password" className="input" type="password" required /><button className="btn full">Open dashboard</button>{error && <div className="error">{error}</div>}</form></section></div></main>
   );
 
   return (
-    <main className="shell dashboard">
-      <div className="container page-content">
-        <nav className="nav"><a className="brand" href="/" aria-label="Go to homepage"><img className="brand-logo" src="/afit-logo-transparent.png" alt="AFIT crest" /><div><span>AFIT Competition Admin</span><small>2026/2027 Session</small></div></a><button className="btn secondary tiny" onClick={logout}><LogOut size={14} /> Logout</button></nav>
-        <header className="dash-head"><div className="kicker">Competition administration</div><h1>Registered Departments</h1></header>
+    <main className="admin-dashboard-shell">
+      <aside className="admin-app-sidebar"><DashboardBrand/><div className="admin-sidebar-label">Main</div><nav><a className="active" href="#admin-overview"><LayoutDashboard/> Dashboard</a><a href="#departments"><Building2/> Departments</a><a href="#approvals"><Users/> Players</a><a href="#approvals"><ClipboardCheck/> Approvals</a></nav><button type="button" onClick={logout}><LogOut/> Logout</button></aside>
+      <div className="admin-app-main"><header className="admin-app-topbar"><div><small>AFIT CUP · 2026/2027</small><b><i/> Admin Dashboard</b></div><label><Search/><input value={query} onChange={(event)=>setQuery(event.target.value)} placeholder="Search departments, players..."/></label><span>AD</span><strong>Admin User<small>Super Admin</small></strong></header><div className="admin-content" id="admin-overview">
+        <header className="dash-head admin-dashboard-heading"><div className="kicker">Overview</div><h1>Competition Administration</h1><p>Here&apos;s what&apos;s happening in the registration portal.</p></header>
         {error && <div className="error" style={{ marginBottom: 18 }}>{error}</div>}
-        <section className="admin-summary admin-summary-two"><div><span>Departments</span><b>{departments.length}</b></div><div><span>Teams Pending</span><b>{pendingTeams}</b></div></section>
+        <section className="admin-overview-stats"><div><Building2/><span><b>{departments.length}</b><small>Departments Registered</small></span></div><div><Users/><span><b>{totalPlayers}</b><small>Players Registered</small></span></div><div><UserCheck/><span><b>{approvedPlayers}</b><small>Players Approved</small></span></div><div><ClipboardCheck/><span><b>{pendingPlayers}</b><small>Players Pending</small></span></div><div><ShieldCheck/><span><b>{rejectedPlayers}</b><small>Players Rejected</small></span></div></section>
+        <section className="admin-analytics-row"><div className="card admin-registration-progress"><h2>Registration Progress</h2><div className="admin-donut" style={{background:`conic-gradient(#07813b 0 ${approvedPercent}%, #f3b51b ${approvedPercent}% ${approvedPercent+pendingPercent}%, #d64545 ${approvedPercent+pendingPercent}% 100%)`}}><span><b>{totalPlayers}</b><small>Total Players</small></span></div><ul><li><i/> Approved <b>{approvedPlayers}</b></li><li><i/> Pending <b>{pendingPlayers}</b></li><li><i/> Rejected <b>{rejectedPlayers}</b></li></ul></div><div className="card admin-department-progress"><div className="department-progress-heading"><h2>Department Registration Status</h2><span><i className="approved-segment"/>Approved <i className="pending-segment"/>Pending <i className="rejected-segment"/>Rejected</span></div>{departments.slice(0,8).map((team)=>{const approved=team.players.filter((player:any)=>player.status==='approved').length;const pending=team.players.filter((player:any)=>player.status==='pending').length;const rejected=team.players.filter((player:any)=>player.status==='rejected').length;return <div key={team.id}><span>{team.departments.name}</span><i className="department-status-track"><b className="approved-segment" style={{width:`${approved/25*100}%`}}/><b className="pending-segment" style={{width:`${pending/25*100}%`}}/><b className="rejected-segment" style={{width:`${rejected/25*100}%`}}/></i><strong><em className="approved-count">{approved}</em><em className="pending-count">{pending}</em><em className="rejected-count">{rejected}</em></strong></div>})}</div></section>
 
-        <section className={`admin-browser ${selected ? 'has-selection' : 'departments-only'}`}>
+        <section className={`admin-browser ${selected ? 'has-selection' : 'departments-only'}`} id="departments">
           <aside className="card department-list">
             <div className="section-title"><div><div className="kicker">Department directory</div><h2>Registrations</h2></div><span className="status pending">{departments.length}</span></div>
             <label className="department-search"><Search size={16} /><input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search departments" /></label>
@@ -104,7 +114,7 @@ export default function AdminClient({ authenticated, teams }: { authenticated: b
             </>
           </div>}
         </section>
-      </div>
+      </div></div>
     </main>
   );
 }

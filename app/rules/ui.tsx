@@ -7,7 +7,8 @@ import BrandLink from '../components/BrandLink';
 
 const rules = [
   'All FIFA standard rules apply.',
-  'All registered players must present their ID card for verification before the first match. Without verification, no player will be permitted to play. Spill-over or deferred students may only play if they have not attempted any final-year examinations. A violation leads to disqualification.',
+  'All registered players must present their ID card for verification before the first match. Without verification, no player will be permitted to play.',
+  'Spill-over or deferred students may only play if they have not attempted any final-year examinations. A violation leads to disqualification.',
   'All registered players must be from the registering department only. A violation discovered at any point during the competition leads to automatic disqualification.',
   'Merging different departments will not be tolerated unless expressly stated and agreed otherwise. A violation discovered at any point leads to automatic disqualification.',
   'If a player represents a department other than their own, that department will receive a three-point deduction during the group stage or be disqualified during the knockout stage, unless otherwise agreed.',

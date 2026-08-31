@@ -11,6 +11,7 @@ export default function PwaRegister() {
   const [installPrompt, setInstallPrompt] = useState<InstallPromptEvent | null>(null);
   const [showIosHelp, setShowIosHelp] = useState(false);
   const [isIos, setIsIos] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
   const [isInstalled, setIsInstalled] = useState(true);
 
   useEffect(() => {
@@ -21,8 +22,18 @@ export default function PwaRegister() {
     const standalone = window.matchMedia('(display-mode: standalone)').matches
       || Boolean((navigator as Navigator & { standalone?: boolean }).standalone);
     const iosDevice = /iphone|ipad|ipod/i.test(navigator.userAgent);
+    const mobileDevice = iosDevice || /android|mobile/i.test(navigator.userAgent);
     setIsInstalled(standalone);
     setIsIos(iosDevice);
+    setIsMobile(mobileDevice);
+
+    let helpTimer: ReturnType<typeof setTimeout> | undefined;
+    if (!standalone && mobileDevice && !sessionStorage.getItem('afit-install-help-seen')) {
+      helpTimer = setTimeout(() => {
+        setShowIosHelp(true);
+        sessionStorage.setItem('afit-install-help-seen', '1');
+      }, 1200);
+    }
 
     const capturePrompt = (event: Event) => {
       event.preventDefault();
@@ -37,6 +48,7 @@ export default function PwaRegister() {
     window.addEventListener('beforeinstallprompt', capturePrompt);
     window.addEventListener('appinstalled', markInstalled);
     return () => {
+      if (helpTimer) clearTimeout(helpTimer);
       window.removeEventListener('beforeinstallprompt', capturePrompt);
       window.removeEventListener('appinstalled', markInstalled);
     };
@@ -50,10 +62,10 @@ export default function PwaRegister() {
       setInstallPrompt(null);
       return;
     }
-    if (isIos) setShowIosHelp(true);
+    setShowIosHelp(true);
   }
 
-  if (isInstalled || (!installPrompt && !isIos)) return null;
+  if (isInstalled || (!installPrompt && !isMobile)) return null;
 
   return (
     <>
@@ -66,7 +78,9 @@ export default function PwaRegister() {
             <button className="pwa-install-close" type="button" onClick={() => setShowIosHelp(false)} aria-label="Close">×</button>
             <img src="/icons/afit-192.png" width="72" height="72" alt="AFIT Football" />
             <h2 id="install-title">Install AFIT Football</h2>
-            <p>In Safari, tap the <strong>Share</strong> button, then choose <strong>Add to Home Screen</strong> and tap <strong>Add</strong>.</p>
+            {isIos
+              ? <p>In Safari, tap the <strong>Share</strong> button, then choose <strong>Add to Home Screen</strong> and tap <strong>Add</strong>.</p>
+              : <p>Tap <strong>Install App</strong> when your browser offers it. If it does not appear, open the browser menu and choose <strong>Install app</strong> or <strong>Add to Home screen</strong>.</p>}
           </section>
         </div>
       )}

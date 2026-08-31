@@ -72,6 +72,7 @@ insert into public.departments(token,name) values
 ('PWE-4582','Physics with Electronics'),
 ('STA-4811','Mathematics & Statistics'),
 ('TCE-9279','Telecommunication Engineering')
+('TEMP-1234','Template')
 on conflict (token) do update set name=excluded.name;
 
 insert into storage.buckets (id,name,public,file_size_limit,allowed_mime_types)

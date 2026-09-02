@@ -1,6 +1,6 @@
 'use client';
 
-import { ArrowLeft, Camera, Check, Circle, CircleDot, Clock3, ShieldCheck, UserCheck, UserX } from 'lucide-react';
+import { Check, ChevronDown, Circle, CircleDot, Clock3, UserCheck, UserX } from 'lucide-react';
 
 export function StatusBadge({ value }: { value: string }) {
   const normalized = ['approved', 'rejected'].includes(value) ? value : 'pending';
@@ -10,32 +10,20 @@ export function StatusBadge({ value }: { value: string }) {
 export function RegistrationProgress({ playerCount, submitted }: { playerCount: number; submitted: boolean }) {
   const active = submitted ? 3 : playerCount >= 20 ? 2 : 1;
   const steps = ['Team Details', 'Players', 'Review', 'Submit'];
-  return <ol className="registration-progress" aria-label="Registration progress">
-    {steps.map((step, index) => {
-      const complete = index < active || submitted;
-      const current = index === active && !submitted;
-      return <li key={step} className={complete ? 'complete' : current ? 'current' : 'incomplete'} aria-current={current ? 'step' : undefined}>
-        <span className="step-icon">{complete ? <Check size={15} /> : current ? <CircleDot size={15} /> : <Circle size={15} />}</span>
-        <span><b>{step}</b><small>{complete ? 'Completed' : current ? 'In progress' : 'Not started'}</small></span>
-      </li>;
-    })}
-  </ol>;
+  return <ol className="registration-progress" aria-label="Registration progress">{steps.map((step, index) => {
+    const complete = index < active || submitted;
+    const current = index === active && !submitted;
+    return <li key={step} className={complete ? 'complete' : current ? 'current' : 'incomplete'} aria-current={current ? 'step' : undefined}><span className="step-icon">{complete ? <Check size={15} /> : current ? <CircleDot size={15} /> : <Circle size={15} />}</span><span><b>{step}</b><small>{complete ? 'Completed' : current ? 'In progress' : 'Not started'}</small></span></li>;
+  })}</ol>;
 }
 
 export function SquadProgress({ count, approved = 0, pending = 0, rejected = 0 }: { count: number; approved?: number; pending?: number; rejected?: number }) {
   const state = count < 20 ? 'incomplete' : count < 25 ? 'valid' : 'full';
   const percent = Math.min(100, (count / 25) * 100);
-  return <section className={`squad-progress squad-${state}`} aria-labelledby="squad-progress-title">
-    <h2 id="squad-progress-title">Squad Progress</h2>
-    <div className="squad-progress-total"><b>{count}</b><span>/ 20</span></div><p>minimum players required</p>
-    <div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={25} aria-valuenow={count} aria-label={`${count} of 25 players registered`}><span style={{ width: `${percent}%` }} /></div>
-    <div className="progress-scale"><span style={{left:`${Math.min(96,percent)}%`}}>{count}</span><b>20</b></div>
-    <div className="squad-approval-tiles"><div><UserCheck/><span><b>{approved}</b><small>Approved</small></span></div><div><Clock3/><span><b>{pending}</b><small>Pending</small></span></div><div><UserX/><span><b>{rejected}</b><small>Rejected</small></span></div></div>
-    <div className="squad-stat-tiles"><div><b>20</b><span>Minimum</span></div><div><b>25</b><span>Maximum</span></div><div><b>{Math.max(0,25-count)}</b><span>Slots Available</span></div></div>
-  </section>;
+  return <section className={`squad-progress squad-${state}`} aria-labelledby="squad-progress-title"><h2 id="squad-progress-title">Squad Progress</h2><div className="squad-progress-total"><b>{count}</b><span>/ 20</span></div><p>minimum players required</p><div className="progress-track" role="progressbar" aria-valuemin={0} aria-valuemax={25} aria-valuenow={count} aria-label={`${count} of 25 players registered`}><span style={{ width: `${percent}%` }} /></div><div className="progress-scale"><span style={{left:`${Math.min(96,percent)}%`}}>{count}</span><b>20</b></div><div className="squad-approval-tiles"><div><UserCheck/><span><b>{approved}</b><small>Approved</small></span></div><div><Clock3/><span><b>{pending}</b><small>Pending</small></span></div><div><UserX/><span><b>{rejected}</b><small>Rejected</small></span></div></div><div className="squad-stat-tiles"><div><b>20</b><span>Minimum</span></div><div><b>25</b><span>Maximum</span></div><div><b>{Math.max(0,25-count)}</b><span>Slots Available</span></div></div></section>;
 }
 
-export function RegistrationReview({ department, logoUrl, players, submitted, onSubmit, onBack, onChangeLogo, busy }: { department: string; logoUrl: string | null; players: any[]; submitted: boolean; onSubmit: () => void; onBack: () => void; onChangeLogo: () => void; busy: boolean }) {
+export function RegistrationReview({ department, logoUrl, players, submitted, onSubmit, busy }: { department: string; logoUrl: string | null; players: any[]; submitted: boolean; onSubmit: () => void; busy: boolean }) {
   const remaining = Math.max(0, 20 - players.length);
   const groups = [
     ['Goalkeepers', players.filter((player) => player.position === 'Goalkeeper')],
@@ -43,18 +31,17 @@ export function RegistrationReview({ department, logoUrl, players, submitted, on
     ['Midfielders', players.filter((player) => player.position === 'Midfielder')],
     ['Attackers', players.filter((player) => player.position === 'Forward')],
   ] as const;
-  const positionColors = ['#2563eb', '#14b8a6', '#8b5cf6', '#f97316'];
+  const positionColors = ['#174ea6', '#0876c9', '#20a64a', '#db202b'];
+  const positionIcons = ['/position-goalkeeper.png', '/position-defender.png', '/position-midfielder.png', '/position-attacker.png'];
   let chartCursor = 0;
-  const chartSegments = groups.map(([, group], index) => { const start = chartCursor; chartCursor += group.length / 25 * 100; return `${positionColors[index]} ${start}% ${chartCursor}%`; });
-  chartSegments.push(`#e5e7eb ${chartCursor}% 100%`);
+  const chartSegments = groups.map(([, group], index) => { const start = chartCursor; chartCursor += players.length ? group.length / players.length * 100 : 0; return `${positionColors[index]} ${start}% ${chartCursor}%`; });
+  if (!players.length) chartSegments.push('#e5e7eb 0% 100%');
+
   return <section className="review-page" id="registration-review" aria-labelledby="review-title">
-    <header className="review-page-heading"><button type="button" onClick={onBack} aria-label="Back to dashboard"><ArrowLeft size={18}/></button><div><h2 id="review-title">Review your registration</h2><p>Please review your team and players before final submission.</p></div>{submitted && <StatusBadge value="approved" />}</header>
-    <section className="review-overview-card">
-      <div className="review-team-summary"><h3>Team Summary</h3><div className="review-team-identity">{logoUrl&&<img src={logoUrl} alt={`${department} logo`}/>}<span><b>{department}</b><small>Department registration</small></span></div><dl><div><dt>Players Registered</dt><dd>{players.length} / 25</dd></div><div><dt>Minimum Required</dt><dd>20</dd></div><div><dt>Maximum Allowed</dt><dd>25</dd></div></dl><p className={remaining?'requirement-pending':'requirement-met'}>{remaining?`${remaining} more required`:'✓ Minimum Requirement Met'}</p></div>
-      <div className="review-squad-overview"><h3>Squad Overview</h3><div className="squad-donut" style={{background:`conic-gradient(${chartSegments.join(',')})`}}><span><b>{players.length}</b><small>Total Players</small></span></div><ul>{groups.map(([label,group],index)=><li key={label}><i className={`position-dot dot-${index}`}/><span>{label}</span><b>{group.length}</b></li>)}</ul></div>
-      <div className="review-logo-panel"><h3>Team Logo</h3>{logoUrl?<img src={logoUrl} alt={`${department} logo`}/>:<div className="review-logo-placeholder"><Camera/></div>}<button type="button" className="btn secondary tiny" onClick={onChangeLogo} disabled={submitted}>Change Logo</button></div>
-    </section>
-    <div className="review-position-groups" aria-label="Squad review list">{groups.map(([label, group]) => <section key={label}><h3>{label} <span>({group.length})</span></h3>{group.length ? group.map((player) => <div key={player.id}><img src={player.photo_url} alt=""/><b>{String(player.jersey_number).padStart(2, '0')}</b><span>{player.first_name} {player.last_name}</span></div>) : <p>No players</p>}</section>)}</div>
-    <footer className={`review-submit-bar ${remaining?'not-ready':'ready'}`}><span><ShieldCheck size={16}/>{submitted?'Final submission received.':remaining?`You need ${remaining} more ${remaining===1?'player':'players'} before submitting.`:'Your squad is ready to be submitted.'}</span>{!submitted&&<button type="button" className="btn primary-action" onClick={onSubmit} disabled={remaining>0||busy}>{busy?'Submitting...':'Submit Registration →'}</button>}</footer>
+    <h2 className="review-mobile-title" id="review-title">Team Summary</h2>
+    <section className="review-team-card"><div className="review-team-identity">{logoUrl?<img src={logoUrl} alt={`${department} logo`}/>:<span className="review-team-fallback">{department.slice(0,2).toUpperCase()}</span>}<span><b>{department} FC</b><small>Department of {department}</small></span></div><dl><div><dt>Players Registered</dt><dd>{players.length}</dd></div><div><dt>Minimum Required</dt><dd>20</dd></div><div><dt>Maximum Allowed</dt><dd>25</dd></div></dl></section>
+    <section className="review-position-summary"><h2>Squad Overview (By Position)</h2><div><div className="review-position-pie" style={{background:`conic-gradient(${chartSegments.join(',')})`}}/><ul>{groups.map(([label,group],index)=><li key={label}><i style={{background:positionColors[index]}}/><span>{label}</span><b>{group.length} ({players.length?(group.length/players.length*100).toFixed(1):'0'}%)</b></li>)}</ul></div></section>
+    <section className="review-player-groups" aria-label="Players by position"><h2>Players by Position</h2><div>{groups.map(([label, group], index) => <details className={`position-group position-group-${index}`} key={label}><summary><span><img className="position-emblem" src={positionIcons[index]} alt=""/>{label} ({group.length})</span><ChevronDown/></summary><div>{group.length ? group.map((player) => <article key={player.id}><img src={player.photo_url} alt=""/><span><b>{player.first_name} {player.last_name}</b><small>Jersey {String(player.jersey_number).padStart(2, '0')}</small></span></article>) : <p>No players</p>}</div></details>)}</div></section>
+    <footer className="review-submit-bar">{submitted?<span>Final submission received.</span>:<button type="button" className="btn primary-action" onClick={onSubmit} disabled={remaining>0||busy}>{busy?'Submitting...':'Submit Registration'}</button>}</footer>
   </section>;
 }

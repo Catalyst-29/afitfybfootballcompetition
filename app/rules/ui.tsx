@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { ArrowRight, LogOut, Scale, ShieldCheck } from 'lucide-react';
+import { ArrowRight, CircleCheckBig, LogOut, Scale, ShieldCheck } from 'lucide-react';
 import BrandLink from '../components/BrandLink';
 
 const rules = [
@@ -67,10 +67,10 @@ export default function RulesClient({ departmentName }: { departmentName: string
 
         <div className="rules-content-heading"><h2>Rules &amp; Regulations</h2><p>Please read every rule carefully before continuing to team registration.</p></div>
         <section className="card rules-card">
-          <ul className="rules-list">{rules.map((rule, index) => <li key={index}><i className="rule-icon"><ShieldCheck size={23}/></i><p>{rule}</p><ShieldCheck className="rule-watermark" size={28}/></li>)}</ul>
+          <ul className="rules-list">{rules.map((rule, index) => <li key={index}><i className="rule-icon"><CircleCheckBig size={23}/></i><p>{rule}</p><CircleCheckBig className="rule-watermark" size={28}/></li>)}</ul>
         </section>
 
-        <section className="card rules-consent"><ShieldCheck className="consent-emblem" size={52}/>
+        <section className="card rules-consent">
           <label className="consent-check"><input type="checkbox" checked={agreed} onChange={(event) => setAgreed(event.target.checked)} /><span><b>I have read and agree to the tournament rules and regulations.</b><small>I understand that violations may lead to penalties or disqualification.</small></span></label>
           {error && <div className="error">{error}</div>}
           <div className="rules-actions"><button className="btn secondary" onClick={declineRules}>I do not agree</button><button className="btn" disabled={!agreed || busy} onClick={acceptRules}>{busy ? 'Saving…' : <>Agree & continue <ArrowRight size={17} /></>}</button></div>

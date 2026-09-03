@@ -1,6 +1,7 @@
 'use client';
 
-import { Check, ChevronDown, Circle, CircleDot, Clock3, UserCheck, UserX } from 'lucide-react';
+import { useEffect, useState } from 'react';
+import { Check, ChevronDown, Circle, CircleDot, Clock3, UserCheck, UserX, X } from 'lucide-react';
 
 export function StatusBadge({ value }: { value: string }) {
   const normalized = ['approved', 'rejected'].includes(value) ? value : 'pending';
@@ -26,6 +27,8 @@ export function SquadProgress({ count, approved = 0, pending = 0, rejected = 0 }
 export function RegistrationReview({ department, logoUrl, players, submitted, status, rejectionReason, onSubmit, busy }: { department: string; logoUrl: string | null; players: any[]; submitted: boolean; status: string; rejectionReason?: string | null; onSubmit: () => void; busy: boolean }) {
   const remaining = Math.max(0, 20 - players.length);
   const rejected = players.filter((player) => player.status === 'rejected').length;
+  const [showRejectedWarning, setShowRejectedWarning] = useState(rejected > 0);
+  useEffect(() => setShowRejectedWarning(rejected > 0), [rejected]);
   const groups = [
     ['Goalkeepers', players.filter((player) => player.position === 'Goalkeeper')],
     ['Defenders', players.filter((player) => player.position === 'Defender')],
@@ -39,10 +42,10 @@ export function RegistrationReview({ department, logoUrl, players, submitted, st
   if (!players.length) chartSegments.push('#e5e7eb 0% 100%');
 
   return <section className="review-page" id="registration-review" aria-labelledby="review-title">
-    <h2 className="review-mobile-title" id="review-title">Team Summary</h2>
+    <div className="review-title-row"><h2 className="review-mobile-title" id="review-title">Team Summary</h2>{showRejectedWarning&&rejected>0&&<div className="review-rejected-warning" role="alert"><span>Correct the {rejected} rejected player{rejected===1?'':'s'} before final submission.</span><button type="button" onClick={()=>setShowRejectedWarning(false)} aria-label="Remove rejected-player warning"><X/></button></div>}</div>
     <section className="review-team-card"><div className="review-team-identity">{logoUrl?<img src={logoUrl} alt={`${department} logo`}/>:<span className="review-team-fallback">{department.slice(0,2).toUpperCase()}</span>}<span><b>{department} FC</b><StatusBadge value={status}/></span></div>{rejectionReason&&<p className="review-team-decision"><b>Admin decision:</b> {rejectionReason}</p>}<dl><div><dt>Players Registered</dt><dd>{players.length}</dd></div><div><dt>Minimum Required</dt><dd>20</dd></div><div><dt>Maximum Allowed</dt><dd>25</dd></div></dl></section>
     <section className="review-position-summary"><h2>Squad Overview (By Position)</h2><div><div className="review-position-pie" style={{background:`conic-gradient(${chartSegments.join(',')})`}}/><ul>{groups.map(([label,group],index)=><li key={label}><i style={{background:positionColors[index]}}/><span>{label}</span><b>{group.length} ({players.length?(group.length/players.length*100).toFixed(1):'0'}%)</b></li>)}</ul></div></section>
     <section className="review-player-groups" aria-label="Players by position"><h2>Players by Position</h2><div>{groups.map(([label, group], index) => <details className={`position-group position-group-${index}`} key={label}><summary><span><img className="position-emblem" src={positionIcons[index]} alt=""/>{label} ({group.length})</span><ChevronDown/></summary><div>{group.length ? group.map((player) => <article key={player.id}><img src={player.photo_url} alt=""/><span><b>{player.first_name} {player.last_name}</b><small>Jersey {String(player.jersey_number).padStart(2, '0')}</small></span></article>) : <p>No players</p>}</div></details>)}</div></section>
-    <footer className="review-submit-bar">{status==='approved'?<span>Department registration approved.</span>:submitted?<span>Final submission received — awaiting admin decision.</span>:rejected>0?<span className="review-submit-blocked">Correct the {rejected} rejected player{rejected===1?'':'s'} before final submission.</span>:<button type="button" className="btn primary-action" onClick={onSubmit} disabled={remaining>0||busy}>{busy?'Submitting...':'Submit Registration'}</button>}</footer>
+    <footer className="review-submit-bar">{status==='approved'?<span>Department registration approved.</span>:submitted?<span>Final submission received — awaiting admin decision.</span>:<button type="button" className="btn primary-action" onClick={onSubmit} disabled={remaining>0||rejected>0||busy}>{busy?'Submitting...':'Submit Registration'}</button>}</footer>
   </section>;
 }

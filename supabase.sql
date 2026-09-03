@@ -72,7 +72,12 @@ insert into public.departments(token,name) values
 ('PWE-4582','Physics with Electronics'),
 ('STA-4811','Mathematics & Statistics'),
 ('TCE-9279','Telecommunication Engineering'),
-('SWE-2026', 'Software Engineering')
+('TKN-4827', 'Template FC'),
+('RID-7314', 'Ridds FC'),
+('JOE-2659', 'Joseph FC'),
+('FIZ-9146', 'Fizo FC'),
+('JAY-3582', 'Jayblack FC'),
+('AYO-6073', 'Ayorinde FC')
 on conflict (token) do update set name=excluded.name;
 
 insert into storage.buckets (id,name,public,file_size_limit,allowed_mime_types)

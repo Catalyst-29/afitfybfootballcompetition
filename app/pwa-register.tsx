@@ -9,10 +9,21 @@ type InstallPromptEvent = Event & {
   userChoice: Promise<{ outcome: 'accepted' | 'dismissed'; platform: string }>;
 };
 
+const INSTALL_CONFIRMED_KEY = 'afit-cup-pwa-installed';
+
 function isInstalled() {
   if (typeof window === 'undefined') return false;
   const navigatorWithStandalone = navigator as Navigator & { standalone?: boolean };
   return window.matchMedia('(display-mode: standalone)').matches || navigatorWithStandalone.standalone === true;
+}
+
+function wasInstallConfirmed() {
+  if (typeof window === 'undefined') return false;
+  return window.localStorage.getItem(INSTALL_CONFIRMED_KEY) === 'true';
+}
+
+function rememberInstallation() {
+  window.localStorage.setItem(INSTALL_CONFIRMED_KEY, 'true');
 }
 
 export default function PwaRegister() {
@@ -24,7 +35,11 @@ export default function PwaRegister() {
 
   useEffect(() => {
     if ('serviceWorker' in navigator) navigator.serviceWorker.register('/sw.js').catch(() => undefined);
-    if (isInstalled()) return;
+    if (isInstalled()) {
+      rememberInstallation();
+      return;
+    }
+    if (wasInstallConfirmed()) return;
 
     const ios = /iphone|ipad|ipod/i.test(navigator.userAgent);
     setIsIos(ios);
@@ -36,6 +51,7 @@ export default function PwaRegister() {
       setVisible(true);
     };
     const handleInstalled = () => {
+      rememberInstallation();
       setVisible(false);
       setInstallEvent(null);
     };
@@ -57,9 +73,10 @@ export default function PwaRegister() {
     setInstalling(false);
     setInstallEvent(null);
     setVisible(false);
+    if (choice.outcome === 'accepted') rememberInstallation();
   }
 
-  if (pathname !== '/' || !visible || isInstalled()) return null;
+  if (pathname !== '/' || !visible || isInstalled() || wasInstallConfirmed()) return null;
 
   return <div className="pwa-install-backdrop" role="dialog" aria-modal="true" aria-labelledby="pwa-install-title">
     <section className="pwa-install-dialog">

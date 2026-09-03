@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import JSZip from 'jszip';
 import { isAdmin } from '@/lib/session';
 import { supabaseAdmin } from '@/lib/supabase';
+import { GET as generatePlayerCard } from '../player-card/route';
 
 export const runtime = 'nodejs';
 
@@ -31,40 +32,57 @@ export async function GET(req: Request) {
 
   const { data: players, error: playersError } = await sb
     .from('players')
-    .select('first_name,last_name,nationality,date_of_birth,jersey_number,position,height_cm,preferred_foot,status,photo_path')
+    .select('id,first_name,last_name,nationality,date_of_birth,jersey_number,position,height_cm,preferred_foot,status,rejection_reason,photo_path,created_at')
     .eq('team_id', teamId)
-    .eq('status', 'approved')
     .order('jersey_number');
   if (playersError) return NextResponse.json({ error: playersError.message }, { status: 500 });
 
-  const approvedPlayers = players || [];
+  const registeredPlayers = players || [];
   const zip = new JSZip();
-  const photosFolder = zip.folder('approved-player-photos');
-  const headers = ['First Name', 'Last Name', 'Nationality', 'Date of Birth', 'Jersey Number', 'Position', 'Height (cm)', 'Preferred Foot', 'Status', 'Photo Filename'];
+  const cardsFolder = zip.folder('player-cards');
+  const photosFolder = zip.folder('player-photos');
+  const informationFolder = zip.folder('registered-player-information');
+  const headers = ['Player ID', 'First Name', 'Last Name', 'Nationality', 'Date of Birth', 'Jersey Number', 'Position', 'Height (cm)', 'Preferred Foot', 'Status', 'Rejection Reason', 'Registered At', 'Photo Filename', 'Card Filename'];
   const rows: string[] = [];
   const notes: string[] = [];
 
-  await Promise.all(approvedPlayers.map(async (player) => {
-    const photoFilename = `${String(player.jersey_number).padStart(2, '0')}-${safeName(player.first_name)}-${safeName(player.last_name)}.jpg`;
-    rows.push([player.first_name, player.last_name, player.nationality, player.date_of_birth, player.jersey_number, player.position, player.height_cm, player.preferred_foot, player.status, photoFilename].map(csvCell).join(','));
-    const { data: photo, error } = await sb.storage.from('competition-files').download(player.photo_path);
-    if (error || !photo) {
-      notes.push(`${player.first_name} ${player.last_name}: ${error?.message || 'Photo unavailable'}`);
-      return;
-    }
-    photosFolder?.file(photoFilename, Buffer.from(await photo.arrayBuffer()));
-  }));
+  for (const player of registeredPlayers) {
+    const baseName = `${String(player.jersey_number).padStart(2, '0')}-${safeName(player.first_name)}-${safeName(player.last_name)}`;
+    const extension = String(player.photo_path).toLowerCase().endsWith('.png') ? 'png' : 'jpg';
+    const photoFilename = `${baseName}.${extension}`;
+    const cardFilename = `${baseName}-player-card.png`;
+    rows.push([player.id,player.first_name,player.last_name,player.nationality,player.date_of_birth,player.jersey_number,player.position,player.height_cm,player.preferred_foot,player.status,player.rejection_reason||'',player.created_at,photoFilename,cardFilename].map(csvCell).join(','));
 
-  rows.sort((a, b) => {
-    const aNumber = Number(a.match(/,"(\d+)",/)?.[1] || 0);
-    const bNumber = Number(b.match(/,"(\d+)",/)?.[1] || 0);
-    return aNumber - bNumber;
-  });
-  zip.file('approved-players.csv', [headers.map(csvCell).join(','), ...rows].join('\r\n'));
-  zip.file('README.txt', `${departmentName}\r\nApproved player information export\r\n\r\nApproved players: ${approvedPlayers.length}\r\nGenerated: ${new Date().toISOString()}\r\n${notes.length ? `\r\nPhoto download notes:\r\n${notes.join('\r\n')}` : ''}`);
+    informationFolder?.file(`${baseName}.txt`, [
+      `Player ID: ${player.id}`,
+      `Name: ${player.first_name} ${player.last_name}`,
+      `Department: ${departmentName}`,
+      `Nationality: ${player.nationality}`,
+      `Date of Birth: ${player.date_of_birth}`,
+      `Jersey Number: ${player.jersey_number}`,
+      `Position: ${player.position}`,
+      `Height: ${player.height_cm} cm`,
+      `Preferred Foot: ${player.preferred_foot}`,
+      `Status: ${player.status}`,
+      `Rejection Reason: ${player.rejection_reason || 'None'}`,
+      `Registered At: ${player.created_at}`,
+    ].join('\r\n'));
+
+    const { data: photo, error: photoError } = await sb.storage.from('competition-files').download(player.photo_path);
+    if (photoError || !photo) notes.push(`${player.first_name} ${player.last_name}: ${photoError?.message || 'Photo unavailable'}`);
+    else photosFolder?.file(photoFilename, Buffer.from(await photo.arrayBuffer()));
+
+    const cardUrl = new URL('/api/player-card', req.url); cardUrl.searchParams.set('id', player.id);
+    const cardResponse = await generatePlayerCard(new Request(cardUrl, { headers: req.headers }));
+    if (cardResponse.ok) cardsFolder?.file(cardFilename, Buffer.from(await cardResponse.arrayBuffer()));
+    else notes.push(`${player.first_name} ${player.last_name}: player card could not be generated`);
+  }
+
+  informationFolder?.file('all-registered-players.csv', [headers.map(csvCell).join(','), ...rows].join('\r\n'));
+  informationFolder?.file('README.txt', `${departmentName}\r\nRegistered player information export\r\n\r\nRegistered players: ${registeredPlayers.length}\r\nGenerated: ${new Date().toISOString()}\r\n${notes.length ? `\r\nExport notes:\r\n${notes.join('\r\n')}` : ''}`);
 
   const archive = await zip.generateAsync({ type: 'nodebuffer', compression: 'DEFLATE', compressionOptions: { level: 6 } });
-  const filename = `${safeName(departmentName)}-approved-player-information.zip`;
+  const filename = `${safeName(departmentName)}-registered-player-information.zip`;
   return new NextResponse(new Uint8Array(archive), {
     headers: {
       'Content-Type': 'application/zip',
